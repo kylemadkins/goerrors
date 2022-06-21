@@ -26,37 +26,60 @@ import (
 )
 
 type Time struct {
-	hour   uint64
-	minute uint64
-	second uint64
+	hour   int
+	minute int
+	second int
 }
+
+const (
+	Hour = iota
+	Minute
+	Second
+)
 
 type TimeParseError struct {
 	msg string
 }
 
 func (t *TimeParseError) Error() string {
-	return "TimeParseError: " + t.msg
+	return fmt.Sprintf("TimeParseError: %v", t.msg)
+}
+
+func isValidRange(v int, component int) bool {
+	if v < 0 {
+		return false
+	}
+	switch component {
+	case Hour:
+		return v < 24
+	case Minute, Second:
+		return v < 60
+	}
+	return false
 }
 
 func parseTimeStr(s string) (Time, error) {
-	var tv [3]uint64
-	tslice := strings.Split(s, ":")
-	if len(tslice) != 3 {
-		return Time{0, 0, 0}, &TimeParseError{"Unexpected format. Expected 00:00:00"}
+	var nv [3]int
+	sv := strings.Split(s, ":")
+	if len(sv) != 3 {
+		return Time{}, &TimeParseError{fmt.Sprintf("Unexpected format. Received %v. Expected 00:00:00", s)}
 	}
-	for i := 0; i < len(tslice); i++ {
-		v, err := strconv.ParseUint(tslice[i], 10, 32)
+	for i := 0; i < len(sv); i++ {
+		v, err := strconv.Atoi(sv[i])
 		if err != nil {
-			return Time{0, 0, 0}, &TimeParseError{"Could not convert value \"" + tslice[i] + "\" to uint64"}
+			return Time{}, &TimeParseError{fmt.Sprintf("Could not convert value \"%v\" to int", sv[i])}
 		}
-		tv[i] = v
+		if !isValidRange(v, i) {
+			return Time{}, &TimeParseError{fmt.Sprintf("Value %v is not in valid range", v)}
+		}
+		nv[i] = v
 	}
-	return Time{tv[0], tv[1], tv[2]}, nil
+	return Time{nv[0], nv[1], nv[2]}, nil
 }
 
 func main() {
 	fmt.Println(parseTimeStr("14:07:11"))
 	fmt.Println(parseTimeStr("14:07:11:11"))
 	fmt.Println(parseTimeStr("a:b:c"))
+	fmt.Println(parseTimeStr("25:11:09"))
 }
